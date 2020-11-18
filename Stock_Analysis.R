@@ -174,10 +174,10 @@ LSE_unit_root = ur.df(LSE_Ret_ts,type="trend" , lags=6)
 summary (LSE_unit_root)
 
 par(mfrow=c(2,2))  # set up the graphics  
-acf(LSE_Ret_ts$FTSE_100.LSE, 48, main="ACF of differences of  log of XA")       
-pacf(LSE_Ret_ts$FTSE_100.LSE, 48, main="PACF of differences of  log of XA")
-acf(LSE_Ret_ts$FTSE_100.LSE^2, 48, main="ACF of differences of  log of XA")       
-pacf(LSE_Ret_ts$FTSE_100.LSE^2, 48, main="PACF of differences of  log of XA")
+acf(LSE_Ret_ts$FTSE_100.LSE, 48, main="ACF of differences of  log of LSE")       
+pacf(LSE_Ret_ts$FTSE_100.LSE, 48, main="PACF of differences of  log of LSE")
+acf(LSE_Ret_ts$FTSE_100.LSE^2, 48, main="ACF of differences of  log of LSE^2")       
+pacf(LSE_Ret_ts$FTSE_100.LSE^2, 48, main="PACF of differences of  log of LSE^2")
 
 
 #############################
