@@ -12,21 +12,21 @@ library(tseries)
 ###########################
 
 #First the Data-Dataset
-data_dates1_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data1/Data_dates1.txt",  header = T)
-data_values1_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data1/Data_values1.txt",  header = T)
+data_dates1_ts<- read.table("Data_dates1.txt",  header = T)
+data_values1_ts<- read.table("Data_values1.txt",  header = T)
 DAX <- cbind(data_dates1_ts, data_values1_ts) 
 rm(data_dates1_ts, data_values1_ts)
 DAX$DAX <- as.numeric(gsub(",", ".", DAX$DAX))
 
 
-data_dates2_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data2/Data_dates2.txt",  header = T)
-data_values2_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data2/Data_values2.txt",  header = T)
+data_dates2_ts<- read.table("Data_dates2.txt",  header = T)
+data_values2_ts<- read.table("Data_values2.txt",  header = T)
 XA <- cbind(data_dates2_ts, data_values2_ts) 
 rm(data_dates2_ts, data_values2_ts)
 XA$FTSE.XA_LARGE_CAP <- as.numeric(gsub(",", ".", XA$FTSE.XA_LARGE_CAP))
 
-data_dates3_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data3/Data_dates3.txt",  header = T)
-data_values3_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data3/Data_values3.txt",  header = T)
+data_dates3_ts<- read.table("Data_dates3.txt",  header = T)
+data_values3_ts<- read.table("Data_values3.txt",  header = T)
 LSE <- cbind(data_dates3_ts, data_values3_ts) 
 rm(data_dates3_ts, data_values3_ts)
 LSE$FTSE_100.LSE <- as.numeric(gsub(",", ".", LSE$FTSE_100.LSE))
