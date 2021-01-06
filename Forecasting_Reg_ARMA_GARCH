@@ -1,0 +1,344 @@
+##################
+#Forecasting part#
+##################
+
+#################################################################
+#We don't have the same dates in this data sets so make it same##
+#################################################################
+library(dplyr)
+library(plyr)
+library(reshape2)
+library(numDeriv)
+library(spd)
+library(mclust)
+library(mvtnorm)
+library(ks)
+library(DistributionUtils)
+library(SkewHyperbolic)
+library(GeneralizedHyperbolic)
+library(rugarch)
+
+df1 <- data_frame(XA_ind = c(index( XA_Ret_ts)) )
+df2 <- data_frame(XA_ind = c(index(LSE_Ret_ts)) )
+df3 <- data_frame(XA_ind = c(index(DAX_Ret_ts)) )
+ind <- merge(x=df1,y=df2,by="XA_ind")
+index_reg <- merge(x=ind,y=df3,by="XA_ind")
+rm(df1,df2,df3,ind)
+
+#So as to perform regression 
+#we need to transort one lag the  Y variable
+
+XA_Ret_ts  = XA_Ret_ts[index_reg$XA_ind]
+LSE_Ret_ts = LSE_Ret_ts[index_reg$XA_ind]
+DAX_Ret_ts = DAX_Ret_ts[index_reg$XA_ind]
+
+#No lag DATA
+regression_XA_no_lag = XA_Ret_ts[index(XA_Ret_ts)[-c(1,2,3,4)]]
+regression_LSE_no_lag = LSE_Ret_ts[index(LSE_Ret_ts)[-c(1,2,3,4)]]
+regression_DAX_no_lag = DAX_Ret_ts[index(DAX_Ret_ts)[-c(1,2,3,4)]]
+#lag 1 DATA
+
+regression_LSE_lag1 = LSE_Ret_ts[index(LSE_Ret_ts)[-c(1,2,3,length(LSE_Ret_ts))]]
+regression_DAX_lag1 = DAX_Ret_ts[index(DAX_Ret_ts)[-c(1,2,3,length(LSE_Ret_ts))]]
+#lag 2 DATA
+
+regression_LSE_lag2 = LSE_Ret_ts[index(LSE_Ret_ts)[-c(1,2,length(LSE_Ret_ts)-1,length(LSE_Ret_ts))]]
+regression_DAX_lag2 = DAX_Ret_ts[index(DAX_Ret_ts)[-c(1,2,length(LSE_Ret_ts)-1,length(LSE_Ret_ts))]]
+#lag 3 DATA
+
+regression_LSE_lag3 = LSE_Ret_ts[index(LSE_Ret_ts)[-c(1,length(LSE_Ret_ts)-2,length(LSE_Ret_ts)-1,length(LSE_Ret_ts))]]
+regression_DAX_lag3 = DAX_Ret_ts[index(DAX_Ret_ts)[-c(1,length(LSE_Ret_ts)-2,length(LSE_Ret_ts)-1,length(LSE_Ret_ts))]]
+#lag 4 DATA
+
+regression_LSE_lag4 = LSE_Ret_ts[index(LSE_Ret_ts)[-c(length(LSE_Ret_ts)-3,length(LSE_Ret_ts)-2,length(LSE_Ret_ts)-1,length(LSE_Ret_ts))]]
+regression_DAX_lag4 = DAX_Ret_ts[index(DAX_Ret_ts)[-c(length(LSE_Ret_ts)-3,length(LSE_Ret_ts)-2,length(LSE_Ret_ts)-1,length(LSE_Ret_ts))]]
+
+
+length(regression_XA_no_lag)
+length(regression_LSE_no_lag)
+length(regression_DAX_no_lag)
+
+length(regression_LSE_lag1)
+length(regression_DAX_lag1)
+
+length(regression_LSE_lag2)
+length(regression_DAX_lag2)
+
+length(regression_LSE_lag3)
+length(regression_DAX_lag3)
+
+length(regression_LSE_lag4)
+length(regression_DAX_lag4)
+
+
+df_heatmap <- data_frame(
+  XA_0_lag = as.numeric(regression_XA_no_lag$FTSE.XA_LARGE_CAP),
+  
+  LSE_0_lag = as.numeric(regression_LSE_no_lag$FTSE_100.LSE),
+  DAX_0_lag = as.numeric(regression_DAX_no_lag$DAX),
+
+  LSE_1_lag = as.numeric(regression_LSE_lag1$FTSE_100.LSE),
+  DAX_1_lag = as.numeric(regression_DAX_lag1$DAX),
+  
+  LSE_2_lag = as.numeric(regression_LSE_lag2$FTSE_100.LSE),
+  DAX_2_lag = as.numeric(regression_DAX_lag2$DAX),
+  
+  LSE_3_lag = as.numeric(regression_LSE_lag3$FTSE_100.LSE),
+  DAX_3_lag = as.numeric( regression_DAX_lag3$DAX),
+  
+  LSE_4_lag = as.numeric(regression_LSE_lag4$FTSE_100.LSE),
+  DAX_4_lag = as.numeric(regression_DAX_lag4$DAX)
+  )
+
+cor(df_heatmap)
+cormat<-signif(cor(df_heatmap),2)
+cormat
+col<- colorRampPalette(c("blue", "white", "red"))(25)
+heatmap(cormat, col=col, symm=TRUE)
+
+rm(cormat,col)
+
+Comb_ts <- cbind(regression_XA,regression_LSE,regression_DAX)
+Comb_ts <- Comb_ts[complete.cases(Comb_ts), ]
+
+
+ggplot(Comb_ts, aes(x = index(Comb_ts))) +
+  geom_line(aes(y = Comb_ts$DAX, color = "DAX")) + ggtitle("XA-DAX-LSE series") +
+  geom_hline(yintercept=mean(Comb_ts$DAX),color = "gray40", size=1)+
+  geom_line(aes(y = Comb_ts$FTSE.XA_LARGE_CAP , color = "XA")) +
+  geom_hline(yintercept=mean(Comb_ts$FTSE.XA_LARGE_CAP),color = "firebrick4", size=1)+
+  geom_line(aes(y = Comb_ts$FTSE_100.LSE, color = "LSE")) + xlab("Date") + ylab("Price") +
+  geom_hline(yintercept=mean(Comb_ts$FTSE_100.LSE),color = "darkcyan", size=1)+
+  theme(plot.title = element_text(hjust = 0.5), panel.border = element_blank()) +
+  scale_colour_manual("Series", values=c("DAX"="gray40", "XA"="firebrick4", "LSE"="darkcyan"))  +
+  scale_x_date(date_labels = "%b %y", date_breaks = "6 months") 
+
+
+XA_regr_model <- step(lm(regression_XA_no_lag$FTSE.XA_LARGE_CAP ~ regression_LSE_no_lag$FTSE_100.LSE + regression_DAX_no_lag$DAX +
+                           regression_LSE_lag1$FTSE_100.LSE + regression_DAX_lag2$DAX + regression_LSE_lag2$FTSE_100.LSE +
+                           regression_LSE_lag3$FTSE_100.LSE + regression_DAX_lag3$DAX + regression_LSE_lag4$FTSE_100.LSE +
+                           regression_DAX_lag4$DAX
+),direction = "both")
+
+summary(XA_regr_model)
+
+##################
+# normality test #
+##################
+
+shapiro.test(as.vector(XA_regr_model$residuals))
+
+
+par(mfrow=c(3,1))         
+
+hist(XA_regr_model$residuals, prob=TRUE, 15)    # histogram    
+lines(density(XA_regr_model$residuals)) 
+ts.plot(XA_regr_model$residuals, col="black", type="o") 
+qqnorm(XA_regr_model$residuals,main="Normal QQplot of DAX")      # normal Q-Q plot  
+qqline(XA_regr_model$residuals)    
+
+##################
+# Unit Root test #
+##################
+#Ljung-Box tests based on 12 lags on the return series
+Box.test(XA_regr_model$residuals,lag=12,type="Ljung")
+Box.test(XA_regr_model$residuals^2,lag=12,type="Ljung")
+XA_reg_unit_root = ur.df(XA_regr_model$residuals,type="trend" , lags=6)
+summary (XA_reg_unit_root)
+
+par(mfrow=c(2,2))  # set up the graphics  
+acf(XA_regr_model$residuals, 48, main="ACF of differences of  log of DAX")       
+pacf(XA_regr_model$residuals, 48, main="PACF of differences of  log of DAX")
+acf(XA_regr_model$residuals^2, 48, main="ACF of differences of  log of DAX")       
+pacf(XA_regr_model$residuals^2, 48, main="PACF of differences of  log of DAX")
+
+#########################
+# Autocorelation issues #
+#########################
+XA_reg_res.arima <- auto.arima(XA_regr_model$residuals)
+summary(XA_reg_res.arima)
+#DIAGNOSTIC CHECKING STEP FOR THE ARIMA MODEL
+
+par(mfrow=c(2,1))  # set up the graphics
+hist(XA_reg_res.arima$residuals)
+qqnorm(XA_reg_res.arima$residuals,main="Normal QQplot of ARIMA-DAX")      # normal Q-Q plot  
+qqline(XA_reg_res.arima$residuals) 
+
+
+par(mfrow=c(2,1))
+acf(XA_reg_res.arima$residuals, 48)
+pacf(XA_reg_res.arima$residuals, 48)
+jarque.bera.test(XA_reg_res.arima$residuals)
+shapiro.test(XA_reg_res.arima$residuals) 
+
+#=============================================
+# XA_REG_Residuals ARCH GARCH ANALYSIS
+#=============================================
+
+par(mfrow=c(2,2))
+
+#=============================================
+# Estimate ARCH(1) + ARMA(2,4) model - Normal distribution
+#=============================================
+XA_res1arch24arma=garchFit(~arma(2,4) + garch(1,0) ,data=XA_regr_model$residuals,trace=F)       # trace = F   reduces the summary
+summary(XA_res1arch24arma) 
+
+plot(XA_res1arch24arma)
+10
+11
+13
+7
+0
+
+#=============================================
+# Estimate ARCH(1) + ARMA(2,4) model - t-Student distribution
+#=============================================
+XA_res1arch24arma_st =garchFit(~arma(2,4) + garch(1,0) ,data=XA_regr_model$residuals, cond.dist="std" ,trace=F)       # trace = F   reduces the summary
+summary(XA_res1arch24arma_st) 
+
+plot(XA_res1arch24arma_st)
+10
+11
+13
+7
+0
+
+#================================================
+# Estimate GARCH(1,1) + ARMA(2,4) model - Normal distribution
+#================================================
+XA_res01arch24arma = garchFit(~ arma(2,4) + garch(1,1) ,data=XA_regr_model$residuals, trace=F)       # trace = F   reduces the summary
+summary(XA_res01arch24arma) 
+
+plot(XA_res01arch24arma)
+10
+11
+13
+7
+0
+
+
+#=============================================
+# Estimate ARCH(1) + ARMA(2,4) model - t-Student distribution
+#=============================================
+XA_res01arch24arma_st =garchFit(~arma(1,0) + garch(1,1) ,data=XA_regr_model$residuals, cond.dist="std" ,trace=F)       # trace = F   reduces the summary
+summary(XA_res01arch24arma_st) 
+
+plot(XA_res01arch24arma_st)
+10
+11
+13
+7
+0
+predict(XA_res01arch24arma_st,6)
+
+#########################
+#Final forecast  model #
+#######################
+
+
+## Fit the ARCH-GARCH
+k=0
+AIC = numeric(30)
+BIC = numeric(30)
+
+for (i in c(1:5)) 
+  {
+  for( j in c(0:5))
+    {
+    
+      k=k+1
+      fit.spec <- ugarchspec(variance.model     = list(model = "sGARCH",
+                                                       garchOrder = c(i, j)), 
+                            # mean.model         = list(armaOrder = c(1 ,1),
+                            #                           include.mean = TRUE,
+                            #                           external.regressors = ext.reg
+                            #                           ), 
+                             distribution.model = "std")
+      
+      fit      <- ugarchfit(data = regression_XA_no_lag$FTSE.XA_LARGE_CAP, spec = fit.spec)
+      AIC[k] <- infocriteria(fit)[1]
+      BIC[k] <- infocriteria(fit)[2]
+  
+    }
+}
+
+par(mfrow=c(1,2)) 
+plot(AIC)
+plot(BIC)
+AIC_GARCH_min = min(AIC)
+BIC_GARCH_min = min(BIC)
+# We can see that the min value is taken in GARCH 1 , 1
+
+## Fit the AR, MA, ARMA + ARCH-GARCH
+k=0
+AIC = numeric(36)
+BIC = numeric(36)
+
+for (i in c(0:5)) 
+{
+  for( j in c(0:5))
+  {
+    
+    k=k+1
+    fit.spec <- ugarchspec(variance.model     = list(model = "sGARCH",
+                                                     garchOrder = c(1, 1)), 
+                            
+                           mean.model         = list(armaOrder = c(i ,j),
+                                                      include.mean = TRUE
+                          #                            ,external.regressors = ext.reg
+                                                      ), 
+                           distribution.model = "std")
+    
+    fit      <- ugarchfit(data = regression_XA_no_lag$FTSE.XA_LARGE_CAP, spec = fit.spec)
+    AIC[k] <- infocriteria(fit)[1]
+    BIC[k] <- infocriteria(fit)[2]
+    
+  }
+}
+
+par(mfrow=c(1,2)) 
+plot(AIC)
+plot(BIC)
+min(BIC)
+min(AIC)
+AIC_GARCH_ARMA_min = min(AIC)
+BIC_GARCH_ARMA_min = min(BIC)
+# We can see that the min value is taken in ARMA 1 ,1
+
+
+## Fit the AR, MA, ARMA + ARCH-GARCH +Regression
+
+ext.reg = matrix(0,length(regression_LSE_no_lag$FTSE_100.LSE),3)
+
+ext.reg[,1] = regression_LSE_no_lag$FTSE_100.LSE; ext.reg[,2] = regression_DAX_no_lag$DAX; ext.reg[,3] = regression_DAX_lag3$DAX
+
+
+fit.spec <- ugarchspec(variance.model     = list(model = "sGARCH",
+                                                 garchOrder = c(1, 1)), 
+                       
+                       mean.model         = list(armaOrder = c(1 ,1),
+                                                 include.mean = TRUE,
+                                                 external.regressors = ext.reg
+                       ), 
+                       distribution.model = "std")
+
+fit      <- ugarchfit(data = regression_XA_no_lag$FTSE.XA_LARGE_CAP, spec = fit.spec)
+
+AIC_GARCH_ARMA_REG_min = infocriteria(fit)[1]
+BIC_GARCH_ARMA_REG_min = infocriteria(fit)[2]
+
+    
+AIC_GARCH_min
+BIC_GARCH_min
+AIC_GARCH_ARMA_min
+BIC_GARCH_ARMA_min
+AIC_GARCH_ARMA_REG_min
+BIC_GARCH_ARMA_REG_min
+
+par(mfrow = c(1,1))
+plot(fit, which =all)
+forc = ugarchforecast(fit,n.ahead=5)
+forc
+plot(forc)
+1
+0
