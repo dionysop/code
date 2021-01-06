@@ -7,26 +7,28 @@ library(rstatix)
 library(fGarch)
 library(forecast)
 library(tseries)
+library(dplyr)
+
 ###########################
 #    Insert the data      #
 ###########################
 
 #First the Data-Dataset
-data_dates1_ts<- read.table("Data_dates1.txt",  header = T)
-data_values1_ts<- read.table("Data_values1.txt",  header = T)
+data_dates1_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data1/Data_dates1.txt",  header = T)
+data_values1_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data1/Data_values1.txt",  header = T)
 DAX <- cbind(data_dates1_ts, data_values1_ts) 
 rm(data_dates1_ts, data_values1_ts)
 DAX$DAX <- as.numeric(gsub(",", ".", DAX$DAX))
 
 
-data_dates2_ts<- read.table("Data_dates2.txt",  header = T)
-data_values2_ts<- read.table("Data_values2.txt",  header = T)
+data_dates2_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data2/Data_dates2.txt",  header = T)
+data_values2_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data2/Data_values2.txt",  header = T)
 XA <- cbind(data_dates2_ts, data_values2_ts) 
 rm(data_dates2_ts, data_values2_ts)
 XA$FTSE.XA_LARGE_CAP <- as.numeric(gsub(",", ".", XA$FTSE.XA_LARGE_CAP))
 
-data_dates3_ts<- read.table("Data_dates3.txt",  header = T)
-data_values3_ts<- read.table("Data_values3.txt",  header = T)
+data_dates3_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data3/Data_dates3.txt",  header = T)
+data_values3_ts<- read.table("C:/Users/kez/Desktop/Safarikas_Time_Series/Data3/Data_values3.txt",  header = T)
 LSE <- cbind(data_dates3_ts, data_values3_ts) 
 rm(data_dates3_ts, data_values3_ts)
 LSE$FTSE_100.LSE <- as.numeric(gsub(",", ".", LSE$FTSE_100.LSE))
@@ -51,7 +53,7 @@ LSE_ts <- xts(LSE$FTSE_100.LSE , order.by=LSE$Dates)
 names(LSE_ts)[1] <- "FTSE_100.LSE"
 LSE_ts$FTSE_100.LSE <- LSE$FTSE_100.LSE
 
-summary(DAX_ts)
+summary(DAX_ts) # 51
 summary(XA_ts)
 summary(LSE_ts)
 
@@ -237,3 +239,187 @@ acf(LSE.arima$residuals, 48)
 pacf(LSE.arima$residuals, 48)
 jarque.bera.test(LSE.arima$residuals)
 shapiro.test(LSE.arima$residuals)
+
+#=============================================
+# XA ARCH GARCH ANALYSIS
+#=============================================
+
+par(mfrow=c(2,2))
+
+#=============================================
+# Estimate ARCH(1) model - Normal distribution
+#=============================================
+XA1arch=garchFit(~garch(1,0),data=XA_Ret_ts,trace=F)       # trace = F   reduces the summary
+summary(XA1arch) 
+coef <- XA1arch@fit$coef
+coef
+fittedvar<- XA1arch@fit$series$h 
+
+plot(XA1arch)
+10
+11
+13
+7
+0
+predict(XA1arch,6)
+
+#================================================
+# Estimate ARCH(1) model - Student-t distribution
+#================================================
+XA1archst=garchFit(~garch(1,0),data=XA_Ret_ts,cond.dist="std",trace=F) 
+summary(XA1archst) 
+plot(XA1archst)
+10
+11
+13
+7
+0
+predict(XA1archst,6)
+
+#================================================
+# Estimate GARCH(1,1) model - Normal distribution
+#================================================
+XA2garch = garchFit(~garch(1,1),data=XA_Ret_ts,trace=F) 
+summary(XA2garch) 
+plot(XA2garch)
+10
+11
+13
+7
+0
+predict(XA2garch,6)
+
+#===================================================
+# Estimate GARCH(1,1) model - Student-t distribution
+#===================================================
+XA2garchst=garchFit(~garch(1,1),data=XA_Ret_ts, cond.dist="std",trace=F) 
+summary(XA2garchst) 
+plot(XA2garchst)
+10
+11
+13
+7
+0
+predict(XA2garchst,6)
+
+#===================================================
+# Tring to combine this models ARMA & GARCH 
+#===================================================
+
+XA1armagarch=garchFit(~arma(0,1)+garch(1,1),data=XA_Ret_ts, cond.dist="std", trace=F)
+summary(XA1armagarch)
+plot(XA1armagarch)
+10
+11
+13
+7
+0
+
+forecast = predict(XA1armagarch,8)
+
+predict(XA1armagarch,n.ahead=8,plot=TRUE,conf=.9,nx=100) 
+
+#=============================================
+# LSE ARCH GARCH ANALYSIS
+#=============================================
+
+par(mfrow=c(2,2))
+
+#=============================================
+# Estimate ARCH(1) model - Normal distribution
+#=============================================
+m1arch=garchFit(~garch(1,0),data=LSE_Ret_ts,trace=F)       # trace = F   reduces the summary
+summary(m1arch) 
+coef <- m1arch@fit$coef
+coef
+fittedvar<- m1arch@fit$series$h 
+
+plot(m1arch)
+13
+0
+predict(m1arch,6)
+
+#================================================
+# Estimate ARCH(1) model - Student-t distribution
+#================================================
+m1archst=garchFit(~garch(1,0),data=LSE_Ret_ts,cond.dist="std",trace=F) 
+summary(m1archst) 
+plot(m1archst)
+13
+0
+predict(m1archst,6)
+
+
+#================================================
+# Estimate GARCH(1,1) model - Normal distribution
+#================================================
+m2garch=garchFit(~garch(1,1),data=LSE_Ret_ts,trace=F) 
+summary(m2garch) 
+plot(m2garch)
+13
+0
+predict(m2garch,6)
+
+
+#===================================================
+# Estimate GARCH(1,1) model - Student-t distribution
+#===================================================
+m2garchst=garchFit(~garch(1,1),data=LSE_Ret_ts, cond.dist="std",trace=F) 
+summary(m2garchst) 
+plot(m2garchst)
+13
+0
+predict(m2garchst,6)
+
+#=============================================
+# DAX ARCH GARCH ANALYSIS
+#=============================================
+
+par(mfrow=c(2,2))
+
+#=============================================
+# Estimate ARCH(1) model - Normal distribution
+#=============================================
+m1arch=garchFit(~garch(1,0),data=DAX_Ret_ts,trace=F)       # trace = F   reduces the summary
+summary(m1arch) 
+coef <- m1arch@fit$coef
+coef
+fittedvar<- m1arch@fit$series$h 
+
+plot(m1arch)
+13
+0
+predict(m1arch,6)
+
+#================================================
+# Estimate ARCH(1) model - Student-t distribution
+#================================================
+m1archst=garchFit(~garch(1,0),data=DAX_Ret_ts,cond.dist="std",trace=F) 
+summary(m1archst) 
+plot(m1archst)
+13
+0
+predict(m1archst,6)
+
+
+
+#================================================
+# Estimate GARCH(1,1) model - Normal distribution
+#================================================
+m2garch=garchFit(~garch(1,1),data=DAX_Ret_ts,trace=F) 
+summary(m2garch) 
+plot(m2garch)
+13
+0
+predict(m2garch,6)
+
+
+#===================================================
+# Estimate GARCH(1,1) model - Student-t distribution
+#===================================================
+m2garchst=garchFit(~garch(1,1),data=XA_DAX_Ret_ts, cond.dist="std",trace=F) 
+summary(m2garchst) 
+plot(m2garchst)
+13
+0
+predict(m2garchst,6)
